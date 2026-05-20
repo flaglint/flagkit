@@ -9,8 +9,8 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      id-token: write
+      contents: write   # needed to create GitHub Releases
+      id-token: write   # needed for npm provenance
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +24,30 @@ jobs:
       - run: npm test
       - run: npm run build
 
-      - run: npm publish --access public --provenance
+      - name: Publish to npm
+        run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Extract changelog section
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          NOTES=$(awk -v ver="$VERSION" '
+            /^## \[/ {
+              if ($0 ~ ("\\[" ver "\\]")) { found=1; next }
+              else if (found) exit
+            }
+            found { print }
+          ' CHANGELOG.md)
+          # Write to a temp file to safely handle multi-line content
+          echo "$NOTES" > /tmp/release_notes.md
+          echo "notes_file=/tmp/release_notes.md" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file "${{ steps.changelog.outputs.notes_file }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
