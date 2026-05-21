@@ -27,11 +27,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://https://github.com/flaglint/flagkit-cli.git"
+    "url": "https://github.com/flaglint/flagkit-cli.git"
   },
   "homepage": "https://flaglint.dev",
   "bugs": {
-    "url": "https://https://github.com/flaglint/flagkit-cli/issues"
+    "url": "https://github.com/flaglint/flagkit-cli/issues"
   },
   "scripts": {
     "build": "tsup",
@@ -43,7 +43,10 @@
     "agent": "tsx scripts/agent/agent.ts",
     "agent:launch": "tsx scripts/agent/agent.ts launch",
     "agent:parallel": "tsx scripts/agent/agent.ts parallel",
-    "agent:sync": "tsx scripts/agent/agent.ts sync-docs"
+    "agent:sync": "tsx scripts/agent/agent.ts sync-docs",
+    "release:patch": "tsx scripts/release.ts patch",
+    "release:minor": "tsx scripts/release.ts minor",
+    "release:major": "tsx scripts/release.ts major"
   },
   "dependencies": {
     "@typescript-eslint/types": "^8.59.4",
