@@ -224,23 +224,39 @@ describe("scanner — isFeatureEnabled", () => {
 });
 
 describe("scanner — LD_CLIENT_PATTERN false positive guard", () => {
-  it("does NOT detect build.variation() as an LD call (false positive guard)", async () => {
+  it("does NOT detect build.variation() — 'ld' substring in 'build'", async () => {
     const result = await scan(new LocalFileSource(FIXTURES), cfg("ld-false-positive-build.ts"));
     expect(result.usages).toHaveLength(0);
     expect(result.totalUsages).toBe(0);
   });
 
-  it("still detects ldClient.variation() correctly (true positive)", async () => {
+  it("does NOT detect child/world/bold/fields .variation() — 'ld' substring in each name", async () => {
+    const result = await scan(new LocalFileSource(FIXTURES), cfg("ld-false-positive-names.ts"));
+    expect(result.usages).toHaveLength(0);
+    expect(result.totalUsages).toBe(0);
+    expect(result.uniqueFlags).not.toContain("child-flag");
+    expect(result.uniqueFlags).not.toContain("world-flag");
+    expect(result.uniqueFlags).not.toContain("bold-flag");
+    expect(result.uniqueFlags).not.toContain("fields-flag");
+  });
+
+  it("detects ldClient.variation() — starts with 'ld' (true positive)", async () => {
     const result = await scan(new LocalFileSource(FIXTURES), cfg("ld-basic.ts"));
     expect(result.usages.length).toBeGreaterThan(0);
     expect(result.usages.every((u) => u.file.includes("ld-basic.ts"))).toBe(true);
   });
 
-  it("still detects LDClient-named objects (starts with LD, case insensitive)", async () => {
-    // ld-basic.ts uses ldClient — tests that ^ld anchor still matches correctly
+  it("detects LDClient-named objects — case-insensitive '^ld' anchor (true positive)", async () => {
     const result = await scan(new LocalFileSource(FIXTURES), cfg("ld-basic.ts"));
     const variation = result.usages.find((u) => u.callType === "variation");
     expect(variation).toBeDefined();
+  });
+
+  it("detects myClient/featureClient .variation() — 'client' substring (true positives)", async () => {
+    const result = await scan(new LocalFileSource(FIXTURES), cfg("ld-client-variants.ts"));
+    expect(result.uniqueFlags).toContain("my-client-flag");
+    expect(result.uniqueFlags).toContain("feature-client-flag");
+    expect(result.totalUsages).toBe(2);
   });
 });
 
@@ -301,6 +317,39 @@ describe("scanner — wrapper functions", () => {
     expect(dynamic).toBeDefined();
     expect(dynamic!.callType).toBe("variation");
     expect(result.uniqueFlags).not.toContain("dynamic");
+  });
+});
+
+describe("scanner — unreadable file warning (P1)", () => {
+  it("emits a read-failure warning and continues scanning readable files", async () => {
+    const readable = "ldClient.variation('show-banner', ctx, false);";
+    const source: import("../../types.js").FileSource = {
+      listFiles: async () => ["readable.ts", "unreadable.ts"],
+      readFile: async (file) => {
+        if (file === "unreadable.ts") {
+          const err = new Error("permission denied") as NodeJS.ErrnoException;
+          err.code = "EACCES";
+          throw err;
+        }
+        return readable;
+      },
+    };
+    const config = FlagLintConfigSchema.parse({ include: ["*.ts"], exclude: [] });
+    const result = await scan(source, config);
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toMatchObject({ kind: "read-failure", file: "unreadable.ts", fsCode: "EACCES" });
+    expect(result.usages).toHaveLength(1);
+    expect(result.uniqueFlags).toContain("show-banner");
+  });
+
+  it("emits UNKNOWN fsCode when error has no code property", async () => {
+    const source: import("../../types.js").FileSource = {
+      listFiles: async () => ["bad.ts"],
+      readFile: async () => { throw new Error("weird error"); },
+    };
+    const config = FlagLintConfigSchema.parse({ include: ["*.ts"], exclude: [] });
+    const result = await scan(source, config);
+    expect(result.warnings[0]).toMatchObject({ kind: "read-failure", fsCode: "UNKNOWN" });
   });
 });
 
