@@ -24,8 +24,13 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npm test
       - run: npm run build
+      - run: npm test
+
+      - name: Configure git
+        run: |
+          git config user.name "flaglint-bot"
+          git config user.email "npm@flaglint.dev"
 
       - name: Publish to npm
         run: npm publish --access public --provenance
