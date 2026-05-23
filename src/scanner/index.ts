@@ -1,8 +1,13 @@
+import { createRequire } from "node:module";
+import { relative } from "node:path";
 import pLimit from "p-limit";
 import { parse } from "@typescript-eslint/typescript-estree";
 import type { TSESTree } from "@typescript-eslint/types";
 import type { CallType, FileSource, FlagUsage, ScanResult, ScanConfig, StalenessEvaluator, ScanWarning } from "../types.js";
 import { checkStale } from "../stale.js";
+
+const require = createRequire(import.meta.url);
+const pkg = require("../../package.json") as { version: string };
 
 const LD_MEMBER_METHODS = new Set(["variation", "variationDetail", "allFlags"]);
 const LD_CLIENT_PATTERN = /^ld|client/i;
@@ -301,8 +306,9 @@ export async function scan(
   ];
 
   return {
+    flaglintVersion: pkg.version,
     scannedAt,
-    scanRoot: source.root ?? ".",
+    scanRoot: source.root ? (relative(process.cwd(), source.root) || ".") : ".",
     scannedFiles,
     totalUsages: allUsages.length,
     uniqueFlags,

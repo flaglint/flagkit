@@ -34,6 +34,7 @@ const dynamicUsage: FlagUsage = {
 };
 
 const resultWithStale: ScanResult = {
+  flaglintVersion: "0.3.0",
   scannedAt: "2026-05-23T06:00:00.000Z",
   scanRoot: "/repo",
   scannedFiles: 2,
@@ -45,6 +46,7 @@ const resultWithStale: ScanResult = {
 };
 
 const resultNoStale: ScanResult = {
+  flaglintVersion: "0.3.0",
   scannedAt: "2026-05-23T06:00:00.000Z",
   scanRoot: "/repo",
   scannedFiles: 1,
@@ -104,6 +106,7 @@ describe("reporter — markdown format", () => {
       stalenessSignals: [{ source: "keyword", keyword: "old" }],
     };
     const result: ScanResult = {
+      flaglintVersion: "0.3.0",
       scannedAt: "2026-05-23T06:00:00.000Z",
       scanRoot: "/repo",
       scannedFiles: 2,
@@ -128,6 +131,7 @@ describe("reporter — markdown format", () => {
       stalenessSignals: [{ source: "path", pattern: "test/spec/mock file" }],
     };
     const result: ScanResult = {
+      flaglintVersion: "0.3.0",
       scannedAt: "2026-05-23T06:00:00.000Z",
       scanRoot: "/repo",
       scannedFiles: 1,
@@ -182,6 +186,7 @@ describe("reporter — json format", () => {
     const parsed = JSON.parse(output) as Record<string, unknown>;
     expect(parsed).toHaveProperty("scannedAt");
     expect(parsed).toHaveProperty("scanRoot");
+    expect(parsed).toHaveProperty("flaglintVersion", "0.3.0");
     expect(parsed).toHaveProperty("scannedFiles");
     expect(parsed).toHaveProperty("totalUsages");
     expect(parsed).toHaveProperty("uniqueFlags");
@@ -205,10 +210,11 @@ describe("reporter — sarif format", () => {
     const output = formatReport(resultWithStale, { format: "sarif" });
     const parsed = JSON.parse(output) as {
       version: string;
-      runs: Array<{ tool: { driver: { name: string } }; results: unknown[] }>;
+      runs: Array<{ tool: { driver: { name: string; version: string } }; results: unknown[] }>;
     };
     expect(parsed.version).toBe("2.1.0");
     expect(parsed.runs[0]?.tool.driver.name).toBe("FlagLint");
+    expect(parsed.runs[0]?.tool.driver.version).toBe("0.3.0");
     expect(parsed.runs[0]?.results).toHaveLength(1);
   });
 

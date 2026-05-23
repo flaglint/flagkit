@@ -96,8 +96,10 @@ describe("CLI — json output", () => {
   it("produces valid parseable JSON with --format json", () => {
     const r = cli("scan", "--format", "json", FIXTURES);
     const parsed = JSON.parse(r.stdout) as Record<string, unknown>;
+    expect(parsed).toHaveProperty("flaglintVersion", "0.3.0");
     expect(parsed).toHaveProperty("scannedAt");
     expect(parsed).toHaveProperty("scanRoot");
+    expect(parsed.scanRoot).not.toMatch(/^\//);
     expect(parsed).toHaveProperty("scannedFiles");
     expect(parsed).toHaveProperty("usages");
     expect(parsed).toHaveProperty("generatedAt");
