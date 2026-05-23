@@ -44,6 +44,7 @@ export interface FlagUsage {
 export const isStale = (u: FlagUsage): boolean => u.stalenessSignals.length > 0;
 
 export interface ScanResult {
+  flaglintVersion: string;
   scannedAt: string;
   scanRoot: string;
   scannedFiles: number;

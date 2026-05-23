@@ -19,6 +19,7 @@ function makeUsage(overrides: Partial<FlagUsage>): FlagUsage {
 
 function makeResult(usages: FlagUsage[]): ScanResult {
   return {
+    flaglintVersion: "0.3.0",
     scannedAt: "2026-05-23T06:00:00.000Z",
     scanRoot: "/repo",
     scannedFiles: 1,

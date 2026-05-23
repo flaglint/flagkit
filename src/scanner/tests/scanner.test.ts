@@ -1,12 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
+import { mkdtemp, rm, writeFile } from "fs/promises";
 import { join, dirname } from "path";
+import { tmpdir } from "os";
 import { fileURLToPath } from "url";
 import { scan } from "../index.js";
 import { LocalFileSource } from "../local-source.js";
-import { FlagLintConfigSchema } from "../../config.js";
+import { FlagLintConfigSchema, loadConfig } from "../../config.js";
 import { isStale } from "../../types.js";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const ORIGINAL_CWD = process.cwd();
+const tmpDirs: string[] = [];
+
+afterEach(async () => {
+  process.chdir(ORIGINAL_CWD);
+  await Promise.all(tmpDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+});
 
 function cfg(filename: string) {
   return FlagLintConfigSchema.parse({ include: [filename], exclude: [] });
@@ -317,6 +326,39 @@ describe("scanner — wrapper functions", () => {
     expect(dynamic).toBeDefined();
     expect(dynamic!.callType).toBe("variation");
     expect(result.uniqueFlags).not.toContain("dynamic");
+  });
+});
+
+describe("scanner — scanned directory config", () => {
+  it("loads config from scanned directory when no config in cwd", async () => {
+    const scanDir = await mkdtemp(join(tmpdir(), "flaglint-scanned-config-"));
+    const otherCwd = await mkdtemp(join(tmpdir(), "flaglint-other-cwd-"));
+    tmpDirs.push(scanDir, otherCwd);
+
+    await writeFile(
+      join(scanDir, "index.ts"),
+      "flagPredicate('docs-demo-flag-boolean', false);\n",
+      "utf8"
+    );
+    await writeFile(
+      join(scanDir, "flaglint.config.json"),
+      JSON.stringify({
+        include: ["index.ts"],
+        exclude: [],
+        wrappers: ["flagPredicate"],
+        minFileCount: 0,
+      }),
+      "utf8"
+    );
+
+    process.chdir(otherCwd);
+
+    const config = await loadConfig(undefined, scanDir);
+    const result = await scan(new LocalFileSource(scanDir), config);
+
+    expect(config.wrappers).toEqual(["flagPredicate"]);
+    expect(result.uniqueFlags).toContain("docs-demo-flag-boolean");
+    expect(result.scanRoot).not.toMatch(/^\//);
   });
 });
 

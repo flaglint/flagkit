@@ -52,7 +52,7 @@ Examples:
         // Load config
         let config;
         try {
-          config = await loadConfig(options.config);
+          config = await loadConfig(options.config, dir);
         } catch (err) {
           process.stderr.write(chalk.red(String(err instanceof Error ? err.message : err)) + "\n");
           process.exit(1);

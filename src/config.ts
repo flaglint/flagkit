@@ -1,5 +1,5 @@
 import { readFile, access } from "fs/promises";
-import { resolve } from "path";
+import { resolve, join } from "path";
 import { z, ZodError } from "zod";
 
 export const FlagLintConfigSchema = z.object({
@@ -33,8 +33,16 @@ export type ScanConfig = Pick<FlagLintConfig, "include" | "exclude" | "provider"
 
 const SEARCH_PATHS = [".flaglintrc", ".flaglintrc.json", "flaglint.config.json"];
 
-export async function loadConfig(configPath?: string): Promise<FlagLintConfig> {
-  const candidates = configPath ? [configPath] : SEARCH_PATHS;
+export async function loadConfig(configPath?: string, dir?: string): Promise<FlagLintConfig> {
+  let candidates: string[];
+  if (configPath) {
+    candidates = [configPath];
+  } else {
+    // Scanned dir takes precedence over cwd — check dir first, then cwd.
+    const fromDir = dir ? SEARCH_PATHS.map((p) => join(resolve(dir), p)) : [];
+    const fromCwd = SEARCH_PATHS.map((p) => resolve(p));
+    candidates = [...fromDir, ...fromCwd];
+  }
 
   for (const candidate of candidates) {
     const full = resolve(candidate);

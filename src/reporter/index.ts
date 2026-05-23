@@ -190,6 +190,7 @@ function formatSARIF(result: ScanResult): string {
           tool: {
             driver: {
               name: "FlagLint",
+              version: result.flaglintVersion,
               informationUri: "https://github.com/flaglint/flaglint",
               rules,
             },
