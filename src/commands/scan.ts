@@ -10,6 +10,7 @@ import { formatReport } from "../reporter/index.js";
 import { loadConfig } from "../config.js";
 import type { ReportFormat, ReporterOptions } from "../types.js";
 import { isStale } from "../types.js";
+import { auditLaunchDarklyInventory, loadLaunchDarklyInventoryFile } from "../launchdarkly-audit.js";
 
 const VALID_FORMATS: ReportFormat[] = ["json", "markdown", "html", "sarif"];
 
@@ -21,6 +22,7 @@ export function registerScanCommand(program: Command): void {
     .option("-f, --format <format>", "output format: json | markdown | html | sarif", "markdown")
     .option("-o, --output <file>", "write report to file")
     .option("-c, --config <path>", "path to .flaglintrc config file")
+    .option("--ld-inventory <file>", "read LaunchDarkly flag inventory from a JSON export")
     .option("--exclude-tests", "exclude test files (*.test.*, *.spec.*, __tests__/, tests/)")
     .addHelpText(
       "after",
@@ -34,7 +36,10 @@ Examples:
   $ flaglint scan --exclude-tests    skip test and spec files`
     )
     .action(
-      async (dir: string, options: { format: string; output?: string; config?: string; excludeTests?: boolean }) => {
+      async (
+        dir: string,
+        options: { format: string; output?: string; config?: string; ldInventory?: string; excludeTests?: boolean }
+      ) => {
         // Validate format before doing any I/O
         if (!(VALID_FORMATS as readonly string[]).includes(options.format)) {
           process.stderr.write(
@@ -102,6 +107,16 @@ Examples:
           process.exit(1);
         }
 
+        if (options.ldInventory) {
+          try {
+            const inventory = await loadLaunchDarklyInventoryFile(resolve(options.ldInventory));
+            result.launchDarklyAudit = auditLaunchDarklyInventory(result, inventory);
+          } catch (err) {
+            process.stderr.write(chalk.red(String(err instanceof Error ? err.message : err)) + "\n");
+            process.exit(1);
+          }
+        }
+
         for (const w of result.warnings) {
           const msg = w.kind === "read-failure"
             ? `warn: could not read ${w.file} (${w.fsCode})`
@@ -118,7 +133,7 @@ Examples:
         }
 
         // Guard: no LD usage
-        if (result.totalUsages === 0) {
+        if (result.totalUsages === 0 && !result.launchDarklyAudit) {
           process.stderr.write(
             chalk.dim(
               `No LaunchDarkly SDK usage detected in ${result.scannedFiles} files.\n`

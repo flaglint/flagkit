@@ -1,0 +1,7 @@
+{
+  "items": [
+    { "key": "generic-bool", "name": "Generic bool" },
+    { "key": "checkout-tier", "name": "Checkout tier" },
+    { "key": "launchdarkly-only-flag", "name": "Dashboard-only flag", "archived": true }
+  ]
+}

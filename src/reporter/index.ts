@@ -1,6 +1,6 @@
 import { resolve } from "path";
 import { pathToFileURL } from "url";
-import type { FlagUsage, ReporterOptions, ScanResult } from "../types.js";
+import type { FlagUsage, LaunchDarklyAudit, LaunchDarklyAuditFlag, ReporterOptions, ScanResult } from "../types.js";
 import { isStale } from "../types.js";
 import { staleReason } from "../stale.js";
 
@@ -43,6 +43,55 @@ function sortedFlagEntries(map: Map<string, FlagEntry>): [string, FlagEntry][] {
     if (a.isStale !== b.isStale) return a.isStale ? -1 : 1;
     return b.usages.length - a.usages.length;
   });
+}
+
+function pushAuditFlagRows(lines: string[], flags: LaunchDarklyAuditFlag[], emptyText: string): void {
+  if (flags.length === 0) {
+    lines.push(emptyText, "");
+    return;
+  }
+
+  lines.push("| Flag Key | Status | Files | Usages |");
+  lines.push("|----------|--------|-------|--------|");
+  for (const flag of flags) {
+    lines.push(
+      `| ${flag.flagKey} | ${flag.status} | ${(flag.files ?? []).join(", ") || "—"} | ${flag.usages ?? "—"} |`
+    );
+  }
+  lines.push("");
+}
+
+function appendLaunchDarklyAudit(lines: string[], audit: LaunchDarklyAudit): void {
+  lines.push("## LaunchDarkly Inventory Audit");
+  lines.push(
+    `**Matched:** ${audit.summary.inCodeAndLaunchDarkly}  ` +
+      `**Stale candidates:** ${audit.summary.staleCandidates}  ` +
+      `**Invalid/deleted:** ${audit.summary.invalidOrDeleted}  ` +
+      `**Manual review:** ${audit.summary.manualReview}`
+  );
+  lines.push("");
+
+  lines.push("### Flags found in code and LaunchDarkly");
+  pushAuditFlagRows(lines, audit.foundInCodeAndLaunchDarkly, "No flags were found in both code and LaunchDarkly.");
+
+  lines.push("### Flags found in LaunchDarkly but not code: stale-candidate");
+  pushAuditFlagRows(lines, audit.foundInLaunchDarklyNotCode, "No LaunchDarkly-only flags found.");
+
+  lines.push("### Flags found in code but missing from LaunchDarkly: invalid-or-deleted");
+  pushAuditFlagRows(lines, audit.foundInCodeNotLaunchDarkly, "No code-only flags found.");
+
+  lines.push("### Dynamic keys and bulk inventory calls: manual-review");
+  if (audit.manualReview.length === 0) {
+    lines.push("No dynamic keys or bulk inventory calls found.", "");
+    return;
+  }
+
+  lines.push("| Kind | Flag Key | Location | Call Type | Reason |");
+  lines.push("|------|----------|----------|-----------|--------|");
+  for (const item of audit.manualReview) {
+    lines.push(`| ${item.kind} | ${item.flagKey} | ${item.file}:${item.line} | ${item.callType} | ${item.reason} |`);
+  }
+  lines.push("");
 }
 
 // ── markdown ─────────────────────────────────────────────────────────────────
@@ -116,6 +165,10 @@ function formatMarkdown(result: ScanResult, options: ReporterOptions): string {
       lines.push(`- \`${u.flagKey}\` at ${u.file}:${u.line} — key determined at runtime`);
     }
     lines.push("");
+  }
+
+  if (result.launchDarklyAudit) {
+    appendLaunchDarklyAudit(lines, result.launchDarklyAudit);
   }
 
   return lines.join("\n");

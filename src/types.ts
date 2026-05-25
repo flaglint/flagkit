@@ -43,6 +43,54 @@ export interface FlagUsage {
 
 export const isStale = (u: FlagUsage): boolean => u.stalenessSignals.length > 0;
 
+export interface LaunchDarklyFlag {
+  key: string;
+  name?: string;
+  archived?: boolean;
+}
+
+export interface LaunchDarklyInventory {
+  flags: LaunchDarklyFlag[];
+}
+
+export type LaunchDarklyAuditStatus =
+  | "in-code-and-launchdarkly"
+  | "stale-candidate"
+  | "invalid-or-deleted"
+  | "manual-review";
+
+export interface LaunchDarklyAuditFlag {
+  flagKey: string;
+  status: LaunchDarklyAuditStatus;
+  name?: string;
+  files?: string[];
+  usages?: number;
+  archived?: boolean;
+}
+
+export interface LaunchDarklyAuditManualReview {
+  kind: "dynamic-key" | "bulk-inventory";
+  flagKey: string;
+  file: string;
+  line: number;
+  callType: string;
+  reason: string;
+}
+
+export interface LaunchDarklyAudit {
+  inventorySource: "json";
+  summary: {
+    inCodeAndLaunchDarkly: number;
+    staleCandidates: number;
+    invalidOrDeleted: number;
+    manualReview: number;
+  };
+  foundInCodeAndLaunchDarkly: LaunchDarklyAuditFlag[];
+  foundInLaunchDarklyNotCode: LaunchDarklyAuditFlag[];
+  foundInCodeNotLaunchDarkly: LaunchDarklyAuditFlag[];
+  manualReview: LaunchDarklyAuditManualReview[];
+}
+
 export interface ScanResult {
   scannedAt: string;
   scanRoot: string;
@@ -52,6 +100,7 @@ export interface ScanResult {
   usages: FlagUsage[];
   scanDurationMs: number;
   warnings: readonly ScanWarning[];
+  launchDarklyAudit?: LaunchDarklyAudit;
 }
 
 export interface ScanOptions {

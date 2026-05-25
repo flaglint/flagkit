@@ -55,6 +55,52 @@ const resultNoStale: ScanResult = {
   warnings: [],
 };
 
+const resultWithLaunchDarklyAudit: ScanResult = {
+  ...resultWithStale,
+  launchDarklyAudit: {
+    inventorySource: "json",
+    summary: {
+      inCodeAndLaunchDarkly: 1,
+      staleCandidates: 1,
+      invalidOrDeleted: 1,
+      manualReview: 1,
+    },
+    foundInCodeAndLaunchDarkly: [
+      {
+        flagKey: "my-flag",
+        status: "in-code-and-launchdarkly",
+        files: ["src/Header.tsx"],
+        usages: 1,
+      },
+    ],
+    foundInLaunchDarklyNotCode: [
+      {
+        flagKey: "dashboard-only",
+        status: "stale-candidate",
+        name: "Dashboard only",
+      },
+    ],
+    foundInCodeNotLaunchDarkly: [
+      {
+        flagKey: "old-flag",
+        status: "invalid-or-deleted",
+        files: ["src/legacy.ts"],
+        usages: 1,
+      },
+    ],
+    manualReview: [
+      {
+        kind: "dynamic-key",
+        flagKey: "dynamic",
+        file: "src/util.ts",
+        line: 3,
+        callType: "variation",
+        reason: "Flag key is computed at runtime and cannot be reconciled to LaunchDarkly inventory.",
+      },
+    ],
+  },
+};
+
 // ── markdown ──────────────────────────────────────────────────────────────────
 
 describe("reporter — markdown format", () => {
@@ -159,6 +205,15 @@ describe("reporter — markdown format", () => {
     expect(output).toContain("Usages by File");
     expect(output).toContain("Line 10");
   });
+
+  it("includes LaunchDarkly inventory audit sections when present", () => {
+    const output = formatReport(resultWithLaunchDarklyAudit, { format: "markdown" });
+    expect(output).toContain("LaunchDarkly Inventory Audit");
+    expect(output).toContain("Flags found in code and LaunchDarkly");
+    expect(output).toContain("Flags found in LaunchDarkly but not code: stale-candidate");
+    expect(output).toContain("Flags found in code but missing from LaunchDarkly: invalid-or-deleted");
+    expect(output).toContain("Dynamic keys and bulk inventory calls: manual-review");
+  });
 });
 
 // ── json ─────────────────────────────────────────────────────────────────────
@@ -195,6 +250,21 @@ describe("reporter — json format", () => {
     const keys = parsed.usages.map((u) => u.flagKey);
     expect(keys).toContain("my-flag");
     expect(keys).toContain("old-flag");
+  });
+
+  it("includes LaunchDarkly audit object in JSON output when present", () => {
+    const output = formatReport(resultWithLaunchDarklyAudit, { format: "json" });
+    const parsed = JSON.parse(output) as {
+      launchDarklyAudit: {
+        summary: { staleCandidates: number; invalidOrDeleted: number };
+        foundInLaunchDarklyNotCode: Array<{ status: string }>;
+        foundInCodeNotLaunchDarkly: Array<{ status: string }>;
+      };
+    };
+    expect(parsed.launchDarklyAudit.summary.staleCandidates).toBe(1);
+    expect(parsed.launchDarklyAudit.summary.invalidOrDeleted).toBe(1);
+    expect(parsed.launchDarklyAudit.foundInLaunchDarklyNotCode[0]?.status).toBe("stale-candidate");
+    expect(parsed.launchDarklyAudit.foundInCodeNotLaunchDarkly[0]?.status).toBe("invalid-or-deleted");
   });
 });
 
