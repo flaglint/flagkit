@@ -363,6 +363,27 @@ forms are resolved before matching.
 
 ---
 
+## Security and trust
+
+FlagLint runs entirely on your machine. No source code, flag keys, or file paths
+are transmitted to any external service. The tool makes no outbound network
+connections during a flag scan or migration. No LaunchDarkly SDK key or any
+credentials are required.
+
+`flaglint migrate --apply` refuses to write files on a dirty git working tree
+(unless `--allow-dirty` is passed), requires a proven `openFeatureClient` binding
+before touching a file, and verifies each source range against the original call
+expression before rewriting.
+
+Releases are published to npm via GitHub Actions using npm Trusted Publishing
+(OIDC), which generates a signed provenance attestation for every release.
+Tests must pass on both Node 20 and Node 22 before any publish step runs.
+
+For vulnerability reports, see [SECURITY.md](./SECURITY.md).
+For a full trust and provenance statement, see [docs/trust.md](./docs/trust.md).
+
+---
+
 ## Contributing
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
