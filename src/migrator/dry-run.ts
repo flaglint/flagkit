@@ -123,6 +123,65 @@ function itemLabel(item: MigrationInventoryItem): string {
   return item.staticFlagKey ?? item.flagKeyExpression ?? "*";
 }
 
+/**
+ * Emit the manual provider-setup section.
+ *
+ * Rules enforced here:
+ * - LaunchDarkly is stated as the ongoing provider, not something to remove.
+ * - Three packages are listed; no removal instruction is emitted.
+ * - The initialization snippet is marked "do not edit automatically".
+ * - The targeting-key requirement is called out explicitly.
+ */
+function formatProviderSetupSection(): string[] {
+  const lines: string[] = [];
+
+  lines.push("## Provider Setup (Required Before Applying Diffs)");
+  lines.push("");
+  lines.push("LaunchDarkly remains your feature flag provider.");
+  lines.push("OpenFeature becomes the evaluation API your application code calls.");
+  lines.push("You add one initialization step; **do not remove any LaunchDarkly packages** —");
+  lines.push("the OpenFeature provider depends on them at runtime.");
+  lines.push("");
+
+  lines.push("### 1. Install packages");
+  lines.push("");
+  lines.push("```sh");
+  lines.push(
+    "npm install @openfeature/server-sdk @launchdarkly/node-server-sdk @launchdarkly/openfeature-node-server"
+  );
+  lines.push("```");
+  lines.push("");
+
+  lines.push("### 2. Initialize once at application startup");
+  lines.push("");
+  lines.push("Add the following to your application bootstrap (do not apply automatically):");
+  lines.push("");
+  lines.push("```typescript");
+  lines.push('import { OpenFeature } from "@openfeature/server-sdk";');
+  lines.push('import { LaunchDarklyProvider } from "@launchdarkly/openfeature-node-server";');
+  lines.push("");
+  lines.push('const ldProvider = new LaunchDarklyProvider("<your-sdk-key>");');
+  lines.push("await OpenFeature.setProviderAndWait(ldProvider);");
+  lines.push("");
+  lines.push("// Share this client across your application.");
+  lines.push("// Replace the `openFeatureClient` placeholder in the diffs below.");
+  lines.push("const openFeatureClient = OpenFeature.getClient();");
+  lines.push("```");
+  lines.push("");
+
+  lines.push("### 3. Evaluation context — targeting key");
+  lines.push("");
+  lines.push("LaunchDarkly requires a `targetingKey` field in every evaluation context.");
+  lines.push("Replace the context arguments shown in the diffs with an object that includes it:");
+  lines.push("");
+  lines.push("```typescript");
+  lines.push("{ targetingKey: user.key, ...otherAttributes }");
+  lines.push("```");
+  lines.push("");
+
+  return lines;
+}
+
 export async function formatDryRunDiff(analysis: MigrationAnalysis, source: FileSource): Promise<string> {
   const replacementsByFile = new Map<string, Replacement[]>();
   const skipped: SkippedUsage[] = [];
@@ -139,6 +198,8 @@ export async function formatDryRunDiff(analysis: MigrationAnalysis, source: File
   }
 
   const lines: string[] = [];
+
+  // ── Header ────────────────────────────────────────────────────────────────
   lines.push("# FlagLint migrate --dry-run");
   lines.push("");
   lines.push(
@@ -153,6 +214,10 @@ export async function formatDryRunDiff(analysis: MigrationAnalysis, source: File
   lines.push(`Skipped usages: ${skipped.length}`);
   lines.push("");
 
+  // ── Provider setup guidance (always present; must be done before applying diffs) ──
+  lines.push(...formatProviderSetupSection());
+
+  // ── Call-site diffs ───────────────────────────────────────────────────────
   if (replacementsByFile.size > 0) {
     lines.push("## Diffs");
     lines.push("```diff");
@@ -165,6 +230,7 @@ export async function formatDryRunDiff(analysis: MigrationAnalysis, source: File
     lines.push("");
   }
 
+  // ── Skipped / manual-review usages ───────────────────────────────────────
   if (skipped.length > 0) {
     lines.push("## Skipped Usages");
     for (const { item, reason } of skipped) {
