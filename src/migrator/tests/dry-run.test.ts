@@ -30,6 +30,44 @@ describe("migrate --dry-run diffs", () => {
       Diffs requiring provider setup: 6
       Skipped usages: 4
 
+      ## Provider Setup (Required Before Applying Diffs)
+
+      LaunchDarkly remains your feature flag provider.
+      OpenFeature becomes the evaluation API your application code calls.
+      You add one initialization step; **do not remove any LaunchDarkly packages** —
+      the OpenFeature provider depends on them at runtime.
+
+      ### 1. Install packages
+
+      \`\`\`sh
+      npm install @openfeature/server-sdk @launchdarkly/node-server-sdk @launchdarkly/openfeature-node-server
+      \`\`\`
+
+      ### 2. Initialize once at application startup
+
+      Add the following to your application bootstrap (do not apply automatically):
+
+      \`\`\`typescript
+      import { OpenFeature } from "@openfeature/server-sdk";
+      import { LaunchDarklyProvider } from "@launchdarkly/openfeature-node-server";
+
+      const ldProvider = new LaunchDarklyProvider("<your-sdk-key>");
+      await OpenFeature.setProviderAndWait(ldProvider);
+
+      // Share this client across your application.
+      // Replace the \`openFeatureClient\` placeholder in the diffs below.
+      const openFeatureClient = OpenFeature.getClient();
+      \`\`\`
+
+      ### 3. Evaluation context — targeting key
+
+      LaunchDarkly requires a \`targetingKey\` field in every evaluation context.
+      Replace the context arguments shown in the diffs with an object that includes it:
+
+      \`\`\`typescript
+      { targetingKey: user.key, ...otherAttributes }
+      \`\`\`
+
       ## Diffs
       \`\`\`diff
       diff --git a/ld-dry-run.ts b/ld-dry-run.ts
@@ -135,5 +173,104 @@ describe("migrate --dry-run diffs", () => {
       '+  const genericBool = openFeatureClient.getBooleanValue("generic-bool", true, context);'
     );
     expect(output).not.toContain("+  const genericBool = await openFeatureClient");
+  });
+});
+
+// ── Prompt 7: provider setup guidance ─────────────────────────────────────────
+// These tests lock in the package names, the "do not remove LD" contract,
+// the section ordering, and the absence of any automatic-apply language.
+
+describe("migrate --dry-run provider setup guidance", () => {
+  it("lists all three required packages in the correct install command", async () => {
+    const output = await dryRunOutput();
+
+    expect(output).toContain("@openfeature/server-sdk");
+    expect(output).toContain("@launchdarkly/node-server-sdk");
+    expect(output).toContain("@launchdarkly/openfeature-node-server");
+    // All three on a single install line so users can copy it directly.
+    expect(output).toContain(
+      "npm install @openfeature/server-sdk @launchdarkly/node-server-sdk @launchdarkly/openfeature-node-server"
+    );
+  });
+
+  it("names LaunchDarklyProvider as the provider class to instantiate", async () => {
+    const output = await dryRunOutput();
+
+    expect(output).toContain("LaunchDarklyProvider");
+    expect(output).toContain('import { LaunchDarklyProvider } from "@launchdarkly/openfeature-node-server"');
+  });
+
+  it("names OpenFeature.setProviderAndWait as the initializer", async () => {
+    const output = await dryRunOutput();
+
+    expect(output).toContain("OpenFeature.setProviderAndWait");
+    expect(output).toContain('import { OpenFeature } from "@openfeature/server-sdk"');
+  });
+
+  it("does NOT instruct users to remove LaunchDarkly packages", async () => {
+    const output = await dryRunOutput();
+
+    // None of these removal patterns should appear.
+    expect(output).not.toContain("npm uninstall launchdarkly");
+    expect(output).not.toContain("npm uninstall @launchdarkly");
+    expect(output).not.toContain("remove launchdarkly");
+    expect(output).not.toContain("remove @launchdarkly");
+    expect(output).not.toContain("uninstall launchdarkly");
+    expect(output).not.toContain("delete launchdarkly");
+  });
+
+  it("explicitly states that LaunchDarkly packages must NOT be removed", async () => {
+    const output = await dryRunOutput();
+
+    expect(output).toContain("do not remove any LaunchDarkly packages");
+  });
+
+  it("explains that LaunchDarkly remains the provider", async () => {
+    const output = await dryRunOutput();
+
+    expect(output).toContain("LaunchDarkly remains your feature flag provider");
+  });
+
+  it("explains that OpenFeature becomes the evaluation API, not the provider", async () => {
+    const output = await dryRunOutput();
+
+    expect(output).toContain("OpenFeature becomes the evaluation API your application code calls");
+  });
+
+  it("mentions the targetingKey requirement for evaluation context", async () => {
+    const output = await dryRunOutput();
+
+    expect(output).toContain("targetingKey");
+    expect(output).toContain("targeting key");
+  });
+
+  it("marks initialization as manual (not auto-applied)", async () => {
+    const output = await dryRunOutput();
+
+    expect(output).toContain("do not apply automatically");
+  });
+
+  it("places the provider setup section between the summary and the call-site diffs", async () => {
+    const output = await dryRunOutput();
+
+    const setupPos = output.indexOf("## Provider Setup");
+    const diffsPos = output.indexOf("## Diffs");
+    const skippedPos = output.indexOf("## Skipped Usages");
+
+    // Setup comes before diffs.
+    expect(setupPos).toBeGreaterThan(0);
+    expect(diffsPos).toBeGreaterThan(setupPos);
+    // Diffs come before skipped usages.
+    expect(skippedPos).toBeGreaterThan(diffsPos);
+  });
+
+  it("does not claim that applying the diffs alone completes the migration", async () => {
+    const output = await dryRunOutput();
+
+    expect(output).not.toContain("migration complete");
+    expect(output).not.toContain("fully migrated");
+    expect(output).not.toContain("safe to apply");
+    expect(output).not.toContain("ready to apply");
+    expect(output).not.toContain("apply these changes");
   });
 });
