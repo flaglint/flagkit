@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "FlagLint",
+          "informationUri": "https://github.com/flaglint/flaglint",
+          "rules": [
+            {
+              "id": "flaglint.keyword",
+              "name": "Stale flag keyword",
+              "shortDescription": {
+                "text": "Flag key contains a stale keyword"
+              },
+              "helpUri": "https://github.com/flaglint/flaglint#what-flaglint-detects"
+            },
+            {
+              "id": "flaglint.path",
+              "name": "Stale flag path",
+              "shortDescription": {
+                "text": "Flag usage appears in a stale path"
+              },
+              "helpUri": "https://github.com/flaglint/flaglint#what-flaglint-detects"
+            },
+            {
+              "id": "flaglint.minFileCount",
+              "name": "Low file count",
+              "shortDescription": {
+                "text": "Flag appears in too few files"
+              },
+              "helpUri": "https://github.com/flaglint/flaglint#configuration"
+            }
+          ]
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "startTimeUtc": "2026-05-26T00:56:59.001Z",
+          "properties": {
+            "scannedFiles": 5,
+            "totalUsages": 20,
+            "uniqueFlags": 11,
+            "scanDurationMs": 82
+          }
+        }
+      ],
+      "originalUriBaseIds": {
+        "%SRCROOT%": {
+          "uri": "file:///Users/krishankantsharma/Development/workspace/flaglint/examples/enterprise-checkout-service/src/"
+        }
+      },
+      "results": []
+    }
+  ]
+}

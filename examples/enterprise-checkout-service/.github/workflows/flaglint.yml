@@ -1,0 +1,87 @@
+name: FlagLint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  flaglint:
+    name: Flag scan and migration enforcement
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20, 22]
+
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Step 1: Scan for LaunchDarkly SDK usage
+      # Produces an HTML report and a SARIF file for GitHub Code Scanning.
+      - name: Scan for LaunchDarkly SDK usage (HTML)
+        run: |
+          npx flaglint scan ./src \
+            --format html \
+            --output generated-reports/inventory-report.html
+        continue-on-error: true
+
+      - name: Scan for LaunchDarkly SDK usage (SARIF)
+        run: |
+          npx flaglint scan ./src \
+            --format sarif \
+            --output flaglint.sarif
+        continue-on-error: true
+
+      # Upload SARIF to GitHub Code Scanning — shows annotations in PRs
+      - name: Upload to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: flaglint.sarif
+        continue-on-error: true
+
+      # Step 2: Generate and upload migration plan
+      - name: Generate OpenFeature migration plan
+        run: |
+          npx flaglint migrate ./src --dry-run > generated-reports/migration-plan.md
+        continue-on-error: true
+
+      - name: Upload migration plan
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: migration-plan-node${{ matrix.node-version }}
+          path: generated-reports/migration-plan.md
+          retention-days: 30
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: inventory-report-node${{ matrix.node-version }}
+          path: generated-reports/inventory-report.html
+          retention-days: 30
+
+      # Step 3: Demonstrate no-direct-LaunchDarkly enforcement.
+      # This demo intentionally contains manual-review examples, so this remains
+      # advisory until those files are migrated by hand.
+      - name: Check OpenFeature migration enforcement
+        run: |
+          npx flaglint validate --no-direct-launchdarkly \
+            --bootstrap-exclude "platform/feature-flags.ts"
+        continue-on-error: true
