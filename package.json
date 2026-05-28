@@ -67,7 +67,7 @@
   "devDependencies": {
     "@astrojs/starlight": "^0.39.2",
     "@types/micromatch": "^4.0.10",
-    "@types/node": "^22.0.0",
+    "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^4.1.6",
     "astro": "^6.3.8",
     "clipboardy": "^4.0.0",
