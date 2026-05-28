@@ -767,5 +767,63 @@ jobs:
       </div>
     </div>
   </footer>
+<!-- Loops signup snippet (static-hosted form) -->
+<section class="loops-signup" aria-labelledby="loops-signup-heading" style="padding:48px 24px;background:linear-gradient(180deg, rgba(0,217,126,0.03), transparent);border-radius:12px;margin:24px 0;">
+  <div class="section-inner" style="max-width:860px;margin:0 auto;">
+    <h3 id="loops-signup-heading" style="margin-bottom:8px">Get FlagLint updates</h3>
+    <p style="color:var(--muted);margin-bottom:16px">Get release notes, migration guides, and early access to future team features. No spam. Unsubscribe at any time.</p>
+    <form id="loopsForm" class="loops-form" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+      <input id="loopsEmail" name="email" type="email" placeholder="you@company.com" required style="flex:1;min-width:220px;padding:10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);" />
+      <input id="loopsFirst" name="firstName" type="text" placeholder="First name (optional)" style="padding:10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);min-width:160px;" />
+      <select id="loopsInterest" name="interest" style="padding:10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);min-width:220px;">
+        <option value="trying">Trying FlagLint</option>
+        <option value="migration">Migrating LaunchDarkly to OpenFeature</option>
+        <option value="platform">Platform engineering / CI enforcement</option>
+        <option value="team">Future team features</option>
+      </select>
+      <div style="flex-basis:100%;display:flex;align-items:center;gap:8px;margin-top:8px;">
+        <label style="color:var(--muted);font-size:13px"><input id="loopsConsent" type="checkbox" required style="margin-right:8px"/> I agree to receive FlagLint product updates and migration guidance by email. I can unsubscribe at any time.</label>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button id="loopsSubmit" type="submit" class="btn btn-primary">Get updates</button>
+        <div id="loopsMessage" role="status" aria-live="polite" style="color:var(--muted);padding-top:8px"></div>
+      </div>
+    </form>
+  </div>
+</section>
+<script>
+(function(){
+  const form = document.getElementById('loopsForm');
+  const msg = document.getElementById('loopsMessage');
+  let submitting = false;
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    if(submitting) return;
+    const email = form.email.value && form.email.value.trim();
+    if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
+      msg.textContent = 'Please enter a valid email address.';
+      return;
+    }
+    if(!form.loopsConsent.checked){ msg.textContent = 'Please agree to receive updates.'; return; }
+    submitting = true;
+    document.getElementById('loopsSubmit').disabled = true;
+
+    if(window.LOOPS_SIGNUP_URL){
+      window.open(window.LOOPS_SIGNUP_URL, '_blank', 'noopener');
+      msg.textContent = "You're subscribed. Watch for FlagLint release updates and migration guidance.";
+      form.reset();
+      submitting = false;
+      document.getElementById('loopsSubmit').disabled = false;
+      return;
+    }
+
+    msg.textContent = 'We could not complete your signup right now. Please try again.';
+    submitting = false;
+    document.getElementById('loopsSubmit').disabled = false;
+  });
+})();
+</script>
+<!-- end Loops snippet -->
+
 </body>
 </html>
