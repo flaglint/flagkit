@@ -29,7 +29,7 @@ FlagLint inventories direct LaunchDarkly Node.js SDK calls, generates reviewable
 and prevents new vendor-coupled flag access from entering your codebase.
 LaunchDarkly remains your provider. OpenFeature becomes the evaluation API your application code calls.
 
-**[Documentation](https://flaglint.dev/docs/quickstart)** · **[Quickstart](https://flaglint.dev/docs/quickstart)** · **[Enterprise Demo](https://flaglint.dev/docs/enterprise-demo)** · **[npm](https://npmjs.com/package/flaglint)** · **[Issues](https://github.com/flaglint/flaglint/issues)**
+**[Documentation](https://flaglint.dev/docs)** · **[Quickstart](https://flaglint.dev/docs/quickstart)** · **[Enterprise Demo](https://flaglint.dev/docs/enterprise-demo)** · **[npm](https://npmjs.com/package/flaglint)** · **[Issues](https://github.com/flaglint/flaglint/issues)**
 
 ---
 
@@ -129,4 +129,4 @@ transmitted to any external service. No outbound network connections during scan
 
 ## Links
 
-[Security](./SECURITY.md) · [Contributing](./CONTRIBUTING.md) · [Changelog](./CHANGELOG.md) · [License](./LICENSE) · [Full docs](https://flaglint.dev/docs/quickstart)
+[Security](./SECURITY.md) · [Contributing](./CONTRIBUTING.md) · [Changelog](./CHANGELOG.md) · [License](./LICENSE) · [Full docs](https://flaglint.dev/docs)
